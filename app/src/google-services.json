@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "958915529432",
+    "project_id": "computershop-50473",
+    "storage_bucket": "computershop-50473.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:958915529432:android:57a9427ce792c27f36a5ad",
+        "android_client_info": {
+          "package_name": "com.example.computershop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9xNn8yDiphlF58HZxtY9CMaA5YCCSUkc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
