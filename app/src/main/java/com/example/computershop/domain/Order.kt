@@ -9,5 +9,6 @@ data class Order(
     val idEmployee : Int,
     val idClient: Int,
     val idStatus: Int,
-    val components: List<Component>
+    val components: List<Component>,
+    val createdAt: String,
 )

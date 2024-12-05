@@ -56,6 +56,7 @@ dependencies {
     implementation (libs.accompanist.pager)
     implementation (libs.accompanist.pager.indicators)
 
+    implementation(libs.androidx.core.splashscreen)
 
     implementation(libs.koin.androidx.compose)
 

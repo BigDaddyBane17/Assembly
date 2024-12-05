@@ -15,7 +15,7 @@ class DatabaseHelper(context: Context)
 
     companion object {
         private const val DB_NAME = "database.db"
-        private const val DB_VERSION = 12
+        private const val DB_VERSION = 14
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
@@ -77,6 +77,7 @@ class DatabaseHelper(context: Context)
         Name TEXT NOT NULL,
         Price REAL NOT NULL,
         ImageURI TEXT,
+        created_at TEXT,
         idEmployee INTEGER,
         idClient INTEGER,
         idStatus INTEGER,
@@ -86,6 +87,19 @@ class DatabaseHelper(context: Context)
       )
     """
         )
+
+        db?.execSQL(
+            """
+            CREATE TRIGGER IF NOT EXISTS set_created_at
+            AFTER INSERT ON OrderInfo
+            BEGIN
+                UPDATE OrderInfo
+                SET created_at = STRFTIME('%Y-%m-%d', 'now')
+                WHERE rowid = NEW.rowid;
+            END;
+            """
+        )
+
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
@@ -100,12 +114,12 @@ class DatabaseHelper(context: Context)
     }
 
 
-    fun getOrdersByStatus(idClient: Int, status: Int): List<Order> {
+    fun getOrdersByStatus(status: Int): List<Order> {
         val db = readableDatabase
         val orders = mutableListOf<Order>()
         val cursor = db.rawQuery(
-            "SELECT * FROM OrderInfo WHERE idClient = ? AND idStatus = ?",
-            arrayOf(idClient.toString(), status.toString())
+            "SELECT * FROM OrderInfo WHERE idStatus = ?",
+            arrayOf(status.toString())
         )
         while (cursor.moveToNext()) {
             val orderId = cursor.getInt(cursor.getColumnIndexOrThrow("idOrderInfo"))
@@ -119,7 +133,8 @@ class DatabaseHelper(context: Context)
                     idEmployee = cursor.getInt(cursor.getColumnIndexOrThrow("idEmployee")),
                     idClient = cursor.getInt(cursor.getColumnIndexOrThrow("idClient")),
                     idStatus = cursor.getInt(cursor.getColumnIndexOrThrow("idStatus")),
-                    components = getComponentsByOrder(orderId)
+                    components = getComponentsByOrder(orderId),
+                    createdAt = cursor.getString(cursor.getColumnIndexOrThrow("created_at"))
                 )
             )
         }
@@ -128,12 +143,12 @@ class DatabaseHelper(context: Context)
     }
 
 
-    fun getOrdersByPriceRange(idClient: Int, minPrice: Double, maxPrice: Double): List<Order> {
+    fun getOrdersByPriceRange(minPrice: Double = 0.0, maxPrice: Double = 10000000000.0): List<Order> {
         val db = readableDatabase
         val orders = mutableListOf<Order>()
         val cursor = db.rawQuery(
-            "SELECT * FROM OrderInfo WHERE idClient = ? AND Price BETWEEN ? AND ?",
-            arrayOf(idClient.toString(), minPrice.toString(), maxPrice.toString())
+            "SELECT * FROM OrderInfo WHERE Price BETWEEN ? AND ?",
+            arrayOf(minPrice.toString(), maxPrice.toString())
         )
         while (cursor.moveToNext()) {
             val orderId = cursor.getInt(cursor.getColumnIndexOrThrow("idOrderInfo"))
@@ -147,7 +162,8 @@ class DatabaseHelper(context: Context)
                     idEmployee = cursor.getInt(cursor.getColumnIndexOrThrow("idEmployee")),
                     idClient = cursor.getInt(cursor.getColumnIndexOrThrow("idClient")),
                     idStatus = cursor.getInt(cursor.getColumnIndexOrThrow("idStatus")),
-                    components = getComponentsByOrder(orderId)
+                    components = getComponentsByOrder(orderId),
+                    createdAt = cursor.getString(cursor.getColumnIndexOrThrow("created_at"))
                 )
             )
         }
@@ -340,7 +356,8 @@ class DatabaseHelper(context: Context)
                 idEmployee = cursor.getInt(cursor.getColumnIndexOrThrow("idEmployee")),
                 idClient = cursor.getInt(cursor.getColumnIndexOrThrow("idClient")),
                 idStatus = cursor.getInt(cursor.getColumnIndexOrThrow("idStatus")),
-                components = getComponentsByOrder(orderId)
+                components = getComponentsByOrder(orderId),
+                createdAt = cursor.getString(cursor.getColumnIndexOrThrow("created_at"))
             )
         }
         cursor.close()
@@ -367,7 +384,8 @@ class DatabaseHelper(context: Context)
                     idEmployee = cursor.getInt(cursor.getColumnIndexOrThrow("idEmployee")),
                     idClient = cursor.getInt(cursor.getColumnIndexOrThrow("idClient")),
                     idStatus = cursor.getInt(cursor.getColumnIndexOrThrow("idStatus")),
-                    components = getComponentsByOrder(orderId)
+                    components = getComponentsByOrder(orderId),
+                    createdAt = cursor.getString(cursor.getColumnIndexOrThrow("created_at"))
                 )
             )
         }
@@ -395,7 +413,8 @@ class DatabaseHelper(context: Context)
                     idEmployee = cursor.getInt(cursor.getColumnIndexOrThrow("idEmployee")),
                     idClient = cursor.getInt(cursor.getColumnIndexOrThrow("idClient")),
                     idStatus = cursor.getInt(cursor.getColumnIndexOrThrow("idStatus")),
-                    components = getComponentsByOrder(orderId)
+                    components = getComponentsByOrder(orderId),
+                    createdAt = cursor.getString(cursor.getColumnIndexOrThrow("created_at"))
                 )
             )
         }
@@ -431,5 +450,25 @@ class DatabaseHelper(context: Context)
         }
         db.update("OrderInfo", contentValues, "idOrderInfo = ?", arrayOf(orderId.toString()))
     }
+
+    fun deleteOrderById(orderId: Int): Boolean {
+        val db = writableDatabase
+        var success = false
+        db.beginTransaction()
+        try {
+            db.delete("Component", "idOrderInfo = ?", arrayOf(orderId.toString()))
+
+            val rowsDeleted = db.delete("OrderInfo", "idOrderInfo = ?", arrayOf(orderId.toString()))
+            success = rowsDeleted > 0
+
+            db.setTransactionSuccessful()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            db.endTransaction()
+        }
+        return success
+    }
+
 
 }

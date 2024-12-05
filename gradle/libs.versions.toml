@@ -2,6 +2,7 @@
 accompanistPager = "0.25.1"
 agp = "8.6.1"
 coilCompose = "2.4.0"
+coreSplashscreen = "1.0.1"
 firebaseBom = "33.5.1"
 
 koinAndroidxCompose = "3.5.6"
@@ -26,6 +27,7 @@ foundationLayoutAndroid = "1.7.2"
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
 accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPager" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }

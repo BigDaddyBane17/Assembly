@@ -138,6 +138,7 @@ fun ManagerOrderInfoScreen(
 
                 )
 
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
@@ -155,6 +156,15 @@ fun ManagerOrderInfoScreen(
                     text = "Цена: ${NumberFormat.getCurrencyInstance().format(order.totalPrice)}",
                     textAlign = TextAlign.Start,
                     color = Color.Black,
+                    fontFamily = FontFamily(Font(R.font.montserrat_light))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    fontSize = 18.sp,
+                    text = "Дата создания: ${order.createdAt}",
+                    textAlign = TextAlign.Start,
+                    color = Color.Gray,
                     fontFamily = FontFamily(Font(R.font.montserrat_light))
                 )
 

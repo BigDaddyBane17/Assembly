@@ -72,21 +72,39 @@ fun ManagerClientsOrdersScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf<Int?>(null) }
-    var priceRange by remember { mutableStateOf(0..1000000) }
-    var minPriceInput by remember { mutableStateOf(priceRange.first.toString()) }
-    var maxPriceInput by remember { mutableStateOf(priceRange.last.toString()) }
+    var priceRange by remember { mutableStateOf(0..Int.MAX_VALUE) }
+    var minPriceInput by remember { mutableStateOf("") }
+    var maxPriceInput by remember { mutableStateOf("") }
 
     LaunchedEffect(searchQuery, selectedStatus, priceRange) {
-        val allOrders = databaseHelper.getAllOrders()
-        orders.value = allOrders.filter { order ->
-            (searchQuery.isEmpty() || order.name.contains(
-                searchQuery,
-                ignoreCase = true
-            ) || order.description.contains(searchQuery, ignoreCase = true)) &&
-                    (selectedStatus == null || order.idStatus == selectedStatus) &&
-                    (order.totalPrice.toInt() in priceRange.first..priceRange.last)
+        val filteredOrders = mutableListOf<Order>()
+
+        if (selectedStatus != null) {
+            filteredOrders.addAll(databaseHelper.getOrdersByStatus(selectedStatus!!))
+        } else {
+            filteredOrders.addAll(databaseHelper.getAllOrders())
+        }
+
+        val minPrice = minPriceInput.toIntOrNull() ?: 0
+        val maxPrice = maxPriceInput.toIntOrNull() ?: Int.MAX_VALUE
+
+        val ordersByPrice = databaseHelper.getOrdersByPriceRange(
+            minPrice = minPrice.toDouble(),
+            maxPrice = maxPrice.toDouble()
+        )
+
+        orders.value = if (selectedStatus != null) {
+            filteredOrders.intersect(ordersByPrice.toSet()).toList()
+        } else {
+            ordersByPrice
+        }.filter { order ->
+            searchQuery.isEmpty() || order.name.contains(searchQuery, ignoreCase = true) ||
+                    order.description.contains(searchQuery, ignoreCase = true)
         }
     }
+
+
+
 
     Scaffold(
         topBar = {
@@ -169,7 +187,7 @@ fun ManagerClientsOrdersScreen(
                         minPriceInput = it
                         priceRange = try {
                             val newMin = it.toIntOrNull() ?: 0
-                            val newMax = maxPriceInput.toIntOrNull() ?: priceRange.last
+                            val newMax = maxPriceInput.toIntOrNull() ?: Int.MAX_VALUE
                             newMin..newMax
                         } catch (e: Exception) {
                             priceRange
@@ -186,7 +204,7 @@ fun ManagerClientsOrdersScreen(
                     onValueChange = {
                         maxPriceInput = it
                         priceRange = try {
-                            val newMax = it.toIntOrNull() ?: priceRange.last
+                            val newMax = it.toIntOrNull() ?: Int.MAX_VALUE
                             val newMin = minPriceInput.toIntOrNull() ?: 0
                             newMin..newMax
                         } catch (e: Exception) {
@@ -199,6 +217,7 @@ fun ManagerClientsOrdersScreen(
                         .padding(start = 8.dp),
                     keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
                 )
+
             }
 
 
