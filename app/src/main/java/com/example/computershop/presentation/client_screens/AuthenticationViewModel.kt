@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.computershop.data.database.DatabaseHelper
+import com.example.computershop.presentation.manager_screens.ManagerAuthenticationViewModel.ManagerLoginState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,11 +19,11 @@ class AuthenticationViewModel(private val databaseHelper: DatabaseHelper) : View
 
     var registrationState by mutableStateOf<RegistrationState>(RegistrationState.Idle)
 
-    fun loginUser(username: String, password: String) {
+    fun loginUser(login: String, password: String) {
         viewModelScope.launch {
             _loginState.value = LoginState.Loading
             try {
-                val userId = databaseHelper.readUser(username, password)
+                val userId = databaseHelper.readUser(login, password)
                 if (userId != -1) {
                     _loginState.value = LoginState.Success(userId!!)
                 } else {
@@ -34,20 +35,30 @@ class AuthenticationViewModel(private val databaseHelper: DatabaseHelper) : View
         }
     }
 
-    fun registerUser(username: String, password: String, name: String, surname: String, phoneNumber: String, email: String) {
+    fun registerUser(login: String, password: String, name: String, surname: String, phoneNumber: String, email: String) {
         viewModelScope.launch {
             registrationState = RegistrationState.Loading
-            registrationState = try {
-                val result = databaseHelper.insertUser(username, password, name, surname, phoneNumber, email)
+            try {
+                if (databaseHelper.isUsernameTaken(login)) {
+                    registrationState = RegistrationState.Error("Логин уже занят другим пользователем")
+                    return@launch
+                }
+
+                val result = databaseHelper.insertUser(login, password, name, surname, phoneNumber, email)
                 if (result > 0) {
-                    RegistrationState.Success
+                    registrationState = RegistrationState.Success
                 } else {
-                    RegistrationState.Error("Неуспешная регистрация")
+                    registrationState = RegistrationState.Error("Неуспешная регистрация")
                 }
             } catch (e: Exception) {
-                RegistrationState.Error("Ошибка в БД: ${e.message}")
+                registrationState = RegistrationState.Error("Ошибка в БД: ${e.message}")
             }
         }
+    }
+
+
+    fun logout() {
+        _loginState.value = LoginState.Idle
     }
 
     sealed class LoginState {

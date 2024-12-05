@@ -2,6 +2,7 @@ package com.example.computershop.data.database
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
@@ -9,12 +10,12 @@ import com.example.computershop.domain.Client
 import com.example.computershop.domain.Component
 import com.example.computershop.domain.Order
 
-class DatabaseHelper(private val context: Context)
+class DatabaseHelper(context: Context)
     : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
 
     companion object {
         private const val DB_NAME = "database.db"
-        private const val DB_VERSION = 8
+        private const val DB_VERSION = 12
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
@@ -23,7 +24,7 @@ class DatabaseHelper(private val context: Context)
             """
       CREATE TABLE User (
         idUser INTEGER PRIMARY KEY AUTOINCREMENT,
-        Username TEXT, 
+        Username TEXT UNIQUE, 
         Password TEXT
       )
     """
@@ -85,8 +86,6 @@ class DatabaseHelper(private val context: Context)
       )
     """
         )
-
-
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
@@ -100,16 +99,84 @@ class DatabaseHelper(private val context: Context)
 
     }
 
-    fun insertUser(username: String, password: String, name: String, surname: String, phoneNumber: String, email: String): Long {
+
+    fun getOrdersByStatus(idClient: Int, status: Int): List<Order> {
+        val db = readableDatabase
+        val orders = mutableListOf<Order>()
+        val cursor = db.rawQuery(
+            "SELECT * FROM OrderInfo WHERE idClient = ? AND idStatus = ?",
+            arrayOf(idClient.toString(), status.toString())
+        )
+        while (cursor.moveToNext()) {
+            val orderId = cursor.getInt(cursor.getColumnIndexOrThrow("idOrderInfo"))
+            orders.add(
+                Order(
+                    id = cursor.getInt(cursor.getColumnIndexOrThrow("idOrderInfo")),
+                    description = cursor.getString(cursor.getColumnIndexOrThrow("Description")),
+                    name = cursor.getString(cursor.getColumnIndexOrThrow("Name")),
+                    totalPrice = cursor.getDouble(cursor.getColumnIndexOrThrow("Price")),
+                    imageUri = cursor.getString(cursor.getColumnIndexOrThrow("ImageURI")),
+                    idEmployee = cursor.getInt(cursor.getColumnIndexOrThrow("idEmployee")),
+                    idClient = cursor.getInt(cursor.getColumnIndexOrThrow("idClient")),
+                    idStatus = cursor.getInt(cursor.getColumnIndexOrThrow("idStatus")),
+                    components = getComponentsByOrder(orderId)
+                )
+            )
+        }
+        cursor.close()
+        return orders
+    }
+
+
+    fun getOrdersByPriceRange(idClient: Int, minPrice: Double, maxPrice: Double): List<Order> {
+        val db = readableDatabase
+        val orders = mutableListOf<Order>()
+        val cursor = db.rawQuery(
+            "SELECT * FROM OrderInfo WHERE idClient = ? AND Price BETWEEN ? AND ?",
+            arrayOf(idClient.toString(), minPrice.toString(), maxPrice.toString())
+        )
+        while (cursor.moveToNext()) {
+            val orderId = cursor.getInt(cursor.getColumnIndexOrThrow("idOrderInfo"))
+            orders.add(
+                Order(
+                    id = cursor.getInt(cursor.getColumnIndexOrThrow("idOrderInfo")),
+                    description = cursor.getString(cursor.getColumnIndexOrThrow("Description")),
+                    name = cursor.getString(cursor.getColumnIndexOrThrow("Name")),
+                    totalPrice = cursor.getDouble(cursor.getColumnIndexOrThrow("Price")),
+                    imageUri = cursor.getString(cursor.getColumnIndexOrThrow("ImageURI")),
+                    idEmployee = cursor.getInt(cursor.getColumnIndexOrThrow("idEmployee")),
+                    idClient = cursor.getInt(cursor.getColumnIndexOrThrow("idClient")),
+                    idStatus = cursor.getInt(cursor.getColumnIndexOrThrow("idStatus")),
+                    components = getComponentsByOrder(orderId)
+                )
+            )
+        }
+        cursor.close()
+        return orders
+    }
+
+
+
+
+
+    fun isUsernameTaken(username: String): Boolean {
+        val db = readableDatabase
+        val cursor = db.rawQuery("SELECT 1 FROM User WHERE Username = ?", arrayOf(username))
+        val exists = cursor.moveToFirst()
+        cursor.close()
+        return exists
+    }
+
+    fun insertUser(login: String, password: String, name: String, surname: String, phoneNumber: String, email: String): Long {
         val db = writableDatabase
         var userId: Long = -1
         db.beginTransaction()
         try {
             val userValues = ContentValues().apply {
-                put("Username", username)
+                put("Username", login)
                 put("Password", password)
             }
-            userId = db.insert("User", null, userValues)
+            userId = db.insertOrThrow("User", null, userValues)
 
             if (userId != -1L) {
                 val clientValues = ContentValues().apply {
@@ -122,16 +189,20 @@ class DatabaseHelper(private val context: Context)
             }
 
             db.setTransactionSuccessful()
-        } finally {
+        } catch (e: SQLiteConstraintException) {
+            throw Exception("Пользователь с таким логином уже существует")
+        }
+
+        finally {
             db.endTransaction()
         }
         return userId
     }
 
 
-    fun readUser(username: String, password: String): Int? {
+    fun readUser(login: String, password: String): Int? {
         val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT idUser FROM User WHERE username = ? AND password = ?", arrayOf(username, password))
+        val cursor = db.rawQuery("SELECT idUser FROM User WHERE username = ? AND password = ?", arrayOf(login, password))
         return if (cursor.moveToFirst()) {
             val userId = cursor.getInt(cursor.getColumnIndexOrThrow("idUser"))
             cursor.close()
@@ -143,9 +214,9 @@ class DatabaseHelper(private val context: Context)
     }
 
 
-    fun insertManager(username: String, password: String) : Long {
+    fun insertManager(login: String, password: String) : Long {
         val values = ContentValues().apply {
-            put("Username", username)
+            put("Username", login)
             put("Password", password)
         }
         val db = writableDatabase
@@ -153,10 +224,10 @@ class DatabaseHelper(private val context: Context)
     }
 
 
-    fun readManager(username: String, password: String) : Int? {
+    fun readManager(login: String, password: String) : Int? {
         val db = readableDatabase
         val selection = "Username = ? AND Password = ?"
-        val selectionArgs = arrayOf(username, password)
+        val selectionArgs = arrayOf(login, password)
         val cursor = db.query("Manager", null, selection, selectionArgs, null, null, null)
         return if (cursor.moveToFirst()) {
             val userId = cursor.getInt(cursor.getColumnIndexOrThrow("Username"))

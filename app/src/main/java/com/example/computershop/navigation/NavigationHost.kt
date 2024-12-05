@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navOptions
 import com.example.computershop.data.database.DatabaseHelper
 import com.example.computershop.presentation.client_screens.AddOrderScreen
 import com.example.computershop.presentation.client_screens.AuthenticationViewModel
@@ -42,8 +43,9 @@ fun NavigationHost(
                 navController = navController,
                 authenticationViewModel = authenticationViewModel,
                 onLoginSuccess = { userId ->
-                    navController.navigate("orders/$userId") {
+                    navController.navigate("orders/$userId",) {
                         popUpTo("login") { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -55,6 +57,7 @@ fun NavigationHost(
                 onRegistrationSuccess = {
                     navController.navigate("login") {
                         popUpTo("register") { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -67,9 +70,13 @@ fun NavigationHost(
             val idClient = backStackEntry.arguments?.getInt("idClient") ?: -1
             OrdersScreen(
                 databaseHelper = databaseHelper,
-                idClient = idClient,
                 navController = navController,
-                onAddOrder = { navController.navigate("addOrder/$idClient") }
+                idClient = idClient,
+                onAddOrder = { navController.navigate("addOrder/$idClient",
+                    navOptions = navOptions {
+                        launchSingleTop = true
+                    }) },
+                authenticationViewModel = authenticationViewModel
             )
         }
 
@@ -81,7 +88,7 @@ fun NavigationHost(
             val idClient = backStackEntry.arguments?.getInt("idClient") ?: -1
             AddOrderScreen(
                 idClient = idClient,
-                onOrderAdded = { navController.popBackStack() },
+                onOrderAdded = { navController.navigateUp() },
                 databaseHelper = databaseHelper
             )
         }
@@ -109,6 +116,7 @@ fun NavigationHost(
                 onLoginSuccess = {
                     navController.navigate("managerOrders") {
                         popUpTo("managerLogin") { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -136,7 +144,10 @@ fun NavigationHost(
                     state = ManagerOrderListState(selectedOrder = selectedOrder),
                     databaseHelper = databaseHelper,
                     onEditStatusClick = { order ->
-                        navController.navigate("editOrderStatus/${order.id}")
+                        navController.navigate("editOrderStatus/${order.id}",
+                            navOptions = navOptions {
+                                launchSingleTop = true
+                            })
                     }
                 )
             } else {

@@ -12,35 +12,35 @@ import kotlinx.coroutines.launch
 
 class ManagerAuthenticationViewModel(private val databaseHelper: DatabaseHelper) : ViewModel() {
 
-    private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
-    val loginState: StateFlow<LoginState> get() = _loginState
+    private val _loginState = MutableStateFlow<ManagerLoginState>(ManagerLoginState.Idle)
+    val loginState: StateFlow<ManagerLoginState> get() = _loginState
 
     fun logout() {
-        _loginState.value = LoginState.Idle
+        _loginState.value = ManagerLoginState.Idle
     }
 
     fun loginManager(username: String, password: String) {
         viewModelScope.launch {
-            _loginState.value = LoginState.Loading
+            _loginState.value = ManagerLoginState.Loading
             try {
                 val managerId = databaseHelper.readManager(username, password)
                 if (managerId != -1) {
-                    _loginState.value = LoginState.Success(managerId!!)
+                    _loginState.value = ManagerLoginState.Success(managerId!!)
                 } else {
-                    _loginState.value = LoginState.Error("Неверные данные")
+                    _loginState.value = ManagerLoginState.Error("Неверные данные")
                 }
             } catch (e: Exception) {
-                _loginState.value = LoginState.Error("Ошибка в БД: ${e.message}")
+                _loginState.value = ManagerLoginState.Error("Ошибка в БД: ${e.message}")
             }
         }
     }
 
 
-    sealed class LoginState {
-        data object Idle : LoginState()
-        data object Loading : LoginState()
-        data class Success(val userId: Int) : LoginState()
-        data class Error(val message: String) : LoginState()
+    sealed class ManagerLoginState {
+        data object Idle : ManagerLoginState()
+        data object Loading : ManagerLoginState()
+        data class Success(val userId: Int) : ManagerLoginState()
+        data class Error(val message: String) : ManagerLoginState()
     }
 
 }
